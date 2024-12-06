@@ -4,7 +4,7 @@ export type Post = {
   id: string;
   content: string;
   user_id: string;
-  image_url?: string;
+  image_url?: string | null;
   likes_count: number;
   created_at: string;
 };
@@ -44,7 +44,7 @@ export function getDb() {
 export async function insertPost(post: {
   content: string;
   user_id: string;
-  image_url?: string;
+  image_url?: string | null;
 }) {
   const db = getDb();
   if (!db) {
