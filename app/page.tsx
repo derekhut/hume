@@ -111,15 +111,27 @@ export default function Home() {
 
   const handleAddComment = async (postId: string, content: string) => {
     try {
-      const username = 'username';
-      const avatarUrl = 'avatarUrl';
+      // Create test user data (in production, this would come from authentication)
+      const userResult = await db.query(
+        `
+        INSERT INTO users (username, avatar_url)
+        VALUES ($1, $2)
+        ON CONFLICT (username) DO UPDATE 
+        SET avatar_url = EXCLUDED.avatar_url
+        RETURNING id, username, avatar_url
+        `,
+        ['testuser', 'https://api.dicebear.com/7.x/avataaars/svg?seed=testuser']
+      );
 
-      // Create comment in Supabase
+      const user = userResult.rows[0];
+
+      // Create comment data
       const commentData = {
         postId,
         content,
-        username,
-        avatarUrl,
+        user_id: user.id,
+        username: user.username,
+        avatar_url: user.avatar_url
       };
 
       console.log('💬 Creating comment in database...');
@@ -136,21 +148,20 @@ export default function Home() {
                 ...post.comments,
                 {
                   id: newCommentFromDb.id,
-                  username,
                   content,
                   created_at: new Date().toLocaleString(),
-                  avatar_url: avatarUrl,
-                },
-              ],
+                  user_id: user.id,
+                  username: user.username,
+                  avatar_url: user.avatar_url
+                }
+              ]
             };
           }
           return post;
         })
       );
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      console.error('❌ Error adding comment:', errorMessage);
-      setError('Failed to add comment. Please try again.');
+      console.error('❌ Error adding comment:', err);
     }
   };
 
