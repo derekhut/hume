@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import CreatePost from './components/CreatePost';
-import Post from './components/Post';
+import PostComponent from './components/Post';
 import { db } from '../utils/supabase';
 
 interface Comment {
@@ -181,7 +181,7 @@ export default function Home() {
 
         <div className="space-y-6">
           {posts.map((post) => (
-            <Post 
+            <PostComponent 
               key={post.id} 
               post={post}
               onLike={() => handleLike(post.id)}
