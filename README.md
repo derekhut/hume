@@ -29,6 +29,25 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## AWS Configuration
+
+To enable AWS S3 image upload functionality, you'll need to set up the following environment variables in your `.env.local` file:
+
+```bash
+NEXT_PUBLIC_AWS_S3_BUCKET_NAME=your-bucket-name
+NEXT_PUBLIC_AWS_REGION=your-aws-region
+NEXT_PUBLIC_AWS_ACCESS_KEY_ID=your-access-key
+NEXT_PUBLIC_AWS_SECRET_ACCESS_KEY=your-secret-key
+```
+
+Make sure to:
+1. Create an S3 bucket in your AWS account
+2. Configure CORS settings for your S3 bucket
+3. Create an IAM user with appropriate S3 permissions
+4. Never commit the `.env.local` file to version control
+
+Note: The image upload currently uses local storage. AWS S3 functionality is prepared but not enabled by default.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
