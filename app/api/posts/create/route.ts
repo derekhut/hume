@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       SET avatar_url = EXCLUDED.avatar_url
       RETURNING id, username, avatar_url
       `,
-      ['testuser', 'https://api.dicebear.com/7.x/avataaars/svg?seed=testuser']
+      ["testuser", "https://api.dicebear.com/7.x/avataaars/svg?seed=testuser"]
     );
 
     const user = userResult.rows[0];
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const post = await insertPost({
       content,
       user_id: user.id,
-      image_url
+      image_url,
     });
 
     // Return the post with user information
@@ -37,15 +37,16 @@ export async function POST(request: Request) {
       post: {
         ...post,
         username: user.username,
-        avatar_url: user.avatar_url
-      }
+        avatar_url: user.avatar_url,
+      },
     });
   } catch (error) {
     console.error("Error creating post:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred",
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       },
       { status: 500 }
     );

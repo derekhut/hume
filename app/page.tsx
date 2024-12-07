@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import CreatePost from './components/CreatePost';
 import PostComponent from './components/Post';
-import { db } from '../utils/supabase';
+import TopBanner from './components/TopBanner';
 
 interface Comment {
   id: string;
@@ -30,26 +30,26 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch posts when component mounts
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const response = await fetch('/api/posts');
-        const data = await response.json();
-        
-        if (!data.success) {
-          throw new Error(data.error || 'Failed to fetch posts');
-        }
-        
+  const fetchPosts = useCallback(async () => {
+    try {
+      const response = await fetch('/api/posts');
+      const data = await response.json();
+      
+      if (data.success) {
         setPosts(data.posts);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch posts');
-        console.error('Error fetching posts:', err);
+      } else {
+        setError('Failed to fetch posts');
       }
-    };
-
-    fetchPosts();
+    } catch (error) {
+      setError('Failed to fetch posts');
+      console.error('Error fetching posts:', error);
+    }
   }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
 
   const handleCreatePost = async (content: string, image?: File) => {
     try {
@@ -111,32 +111,25 @@ export default function Home() {
 
   const handleAddComment = async (postId: string, content: string) => {
     try {
-      // Create test user data (in production, this would come from authentication)
-      const userResult = await db.query(
-        `
-        INSERT INTO users (username, avatar_url)
-        VALUES ($1, $2)
-        ON CONFLICT (username) DO UPDATE 
-        SET avatar_url = EXCLUDED.avatar_url
-        RETURNING id, username, avatar_url
-        `,
-        ['testuser', 'https://api.dicebear.com/7.x/avataaars/svg?seed=testuser']
-      );
+      const response = await fetch('/api/comments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          post_id: postId,
+          content,
+        }),
+      });
 
-      const user = userResult.rows[0];
+      if (!response.ok) {
+        throw new Error('Failed to create comment');
+      }
 
-      // Create comment data
-      const commentData = {
-        postId,
-        content,
-        user_id: user.id,
-        username: user.username,
-        avatar_url: user.avatar_url
-      };
-
-      console.log('💬 Creating comment in database...');
-      const newCommentFromDb = await db.createComment(commentData);
-      console.log('✅ Comment created in database:', newCommentFromDb.id);
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create comment');
+      }
 
       // Add comment to local state
       setPosts(prevPosts =>
@@ -144,17 +137,7 @@ export default function Home() {
           if (post.id === postId) {
             return {
               ...post,
-              comments: [
-                ...post.comments,
-                {
-                  id: newCommentFromDb.id,
-                  content,
-                  created_at: new Date().toLocaleString(),
-                  user_id: user.id,
-                  username: user.username,
-                  avatar_url: user.avatar_url
-                }
-              ]
+              comments: [...post.comments, data.comment]
             };
           }
           return post;
@@ -162,17 +145,36 @@ export default function Home() {
       );
     } catch (err) {
       console.error('❌ Error adding comment:', err);
+      setError('Failed to add comment. Please try again.');
     }
   };
 
-  const handleLike = (postId: string) => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? { ...post, likes_count: post.likes_count + 1 }
-          : post
-      )
-    );
+  const handleLike = async (postId: string) => {
+    try {
+      const response = await fetch(`/api/posts/${postId}/like`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to like post');
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to like post');
+      }
+
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post.id === postId
+            ? { ...post, likes_count: post.likes_count + 1 }
+            : post
+        )
+      );
+    } catch (err) {
+      console.error('Error liking post:', err);
+      setError(err instanceof Error ? err.message : 'Failed to like post');
+    }
   };
 
   if (error) {
@@ -180,25 +182,28 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen p-4 md:p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <CreatePost onSubmit={handleCreatePost} />
-        
-        {error && (
-          <div className="p-4 text-red-500 bg-red-100 rounded">
-            {error}
-          </div>
-        )}
+    <main className="min-h-screen bg-[#0a0a0a] text-white">
+      <TopBanner onRefresh={fetchPosts} />
+      <div className="p-4 md:p-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <CreatePost onSubmit={handleCreatePost} />
+          
+          {error && (
+            <div className="p-4 text-red-500 bg-red-100 rounded">
+              {error}
+            </div>
+          )}
 
-        <div className="space-y-6">
-          {posts.map((post) => (
-            <PostComponent 
-              key={post.id} 
-              post={post}
-              onLike={() => handleLike(post.id)}
-              onAddComment={(content) => handleAddComment(post.id, content)}
-            />
-          ))}
+          <div className="space-y-6">
+            {posts.map((post) => (
+              <PostComponent 
+                key={post.id} 
+                post={post}
+                onLike={() => handleLike(post.id)}
+                onAddComment={(content) => handleAddComment(post.id, content)}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </main>
