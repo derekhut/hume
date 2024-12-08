@@ -7,6 +7,7 @@ import TopBanner from './components/TopBanner';
 
 interface Comment {
   id: string;
+  post_id: string;
   content: string;
   created_at: string;
   user_id: string;
