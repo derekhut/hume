@@ -1,13 +1,15 @@
 import { NextResponse, Request } from "next/server";
 import { getDb } from "@/utils/db";
 
-export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: Request) {
   try {
-    // Get the post ID from the URL
-    const { id } = params;
+    // Get the post ID from the URL path segments
+    const urlParts = request.url.split('/');
+    const id = urlParts[urlParts.indexOf('posts') + 1];
+
+    if (!id || id === 'like') {
+      return NextResponse.json({ error: 'Invalid post ID' }, { status: 400 });
+    }
 
     const db = getDb();
     if (!db) {
