@@ -3,11 +3,11 @@ import { getDb } from "@/utils/db";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     // Await the params to fix the Next.js warning
-    const { id } = await Promise.resolve(params);
+    const { id } = await Promise.resolve(context.params);
 
     const db = getDb();
     if (!db) {
