@@ -34,6 +34,13 @@ export function getDb() {
 
     globalPool = new Pool({
       connectionString,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
+
+    globalPool.on('error', (err) => {
+      console.error('Unexpected error on idle client', err);
     });
 
     return globalPool;
@@ -99,7 +106,7 @@ export async function insertImage(image: {
     VALUES ($1, $2)
     RETURNING *
     `,
-    [image.imageUrl, image.llmName || '']
+    [image.imageUrl, image.llmName || ""]
   );
   return result.rows[0] as Image;
 }
@@ -109,14 +116,14 @@ export async function getPostWithComments(postId: string) {
   if (!db) {
     throw new Error("Database connection is undefined");
   }
-  
+
   // Get post
   const postResult = await db.query(
     `SELECT * FROM posts WHERE id = $1`,
     [postId]
   );
   const post = postResult.rows[0] as Post;
-  
+
   if (!post) {
     return null;
   }
@@ -128,7 +135,7 @@ export async function getPostWithComments(postId: string) {
      ORDER BY created_at ASC`,
     [postId]
   );
-  
+
   return {
     ...post,
     comments: commentsResult.rows as Comment[]
@@ -140,27 +147,27 @@ export async function getAllPosts() {
   if (!db) {
     throw new Error("Database connection is undefined");
   }
-  
+
   // Get all posts
   const postsResult = await db.query(
     `SELECT * FROM posts ORDER BY created_at DESC`
   );
-  
+
   const posts = postsResult.rows;
-  
+
   // If we have posts, get their comments
   if (posts.length > 0) {
     const postIds = posts.map(post => post.id);
-    
+
     const commentsResult = await db.query(
       `SELECT * FROM comments 
        WHERE post_id = ANY($1::uuid[])
        ORDER BY created_at ASC`,
       [postIds]
     );
-    
+
     const comments = commentsResult.rows;
-    
+
     // Group comments by post
     const commentsByPost = comments.reduce((acc, comment) => {
       if (!acc[comment.post_id]) {
@@ -169,7 +176,7 @@ export async function getAllPosts() {
       acc[comment.post_id].push(comment);
       return acc;
     }, {} as Record<string, any[]>);
-    
+
     // Add comments to each post
     return posts.map(post => ({
       ...post,
@@ -178,7 +185,7 @@ export async function getAllPosts() {
       comments: commentsByPost[post.id] || []
     }));
   }
-  
+
   // If no posts, return empty array with generated usernames and avatars
   return posts.map(post => ({
     ...post,
