@@ -1,4 +1,4 @@
-import { NextResponse, Request } from "next/server";
+import { NextResponse } from "next/server";
 import { getDb } from "@/utils/db";
 
 export async function POST(request: Request) {
