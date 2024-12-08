@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/utils/db";
 
 export async function POST(request: Request) {
+  const db = getDb();
+  if (!db) {
+    return NextResponse.json({ error: "Database connection failed" }, { status: 500 });
+  }
+
   try {
     // Get the post ID from the URL path segments
     const urlParts = request.url.split('/');
@@ -11,44 +16,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid post ID' }, { status: 400 });
     }
 
-    const db = getDb();
-    if (!db) {
-      throw new Error("Database connection is undefined");
-    }
-
-    // Increment likes count
-    const result = await db.query(
-      `
-      UPDATE posts
-      SET likes_count = likes_count + 1
-      WHERE id = $1
-      RETURNING likes_count
-      `,
-      [id]
-    );
-
-    if (result.rowCount === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Post not found",
-        },
-        { status: 404 }
+    // Use a client from the pool
+    const client = await db.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Increment likes count
+      const result = await client.query(
+        `
+        UPDATE posts
+        SET likes_count = likes_count + 1
+        WHERE id = $1
+        RETURNING *
+        `,
+        [id]
       );
-    }
 
-    return NextResponse.json({
-      success: true,
-      likes_count: result.rows[0].likes_count,
-    });
+      if (result.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return NextResponse.json({ error: "Post not found" }, { status: 404 });
+      }
+
+      await client.query('COMMIT');
+      return NextResponse.json(result.rows[0]);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
-    console.error("Error liking post:", error);
+    console.error("Error in like post route:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Unknown error occurred",
-      },
+      { error: "Failed to like post" },
       { status: 500 }
     );
   }

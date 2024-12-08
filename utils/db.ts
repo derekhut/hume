@@ -25,9 +25,9 @@ export type Image = {
   created_at: string;
 };
 
-let globalPool: Pool;
+let globalPool: Pool | null;
 
-export function getDb() {
+export function getDb(): Pool {
   if (!globalPool) {
     const connectionString = process.env.POSTGRES_URL;
     if (!connectionString) {
@@ -37,27 +37,47 @@ export function getDb() {
 
     globalPool = new Pool({
       connectionString,
-      max: 20,
+      max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
+      ssl: process.env.NODE_ENV === 'production' ? {
+        rejectUnauthorized: false
+      } : undefined
     });
 
     globalPool.on('error', (err) => {
       console.error('Unexpected error on idle client', err);
+      globalPool = null;
     });
 
-    // Test the connection
-    globalPool.query('SELECT NOW()', (err, res) => {
-      if (err) {
-        console.error('Error testing database connection:', err);
-      } else {
-        console.log('Database connection successful');
-      }
+    globalPool.on('connect', (client) => {
+      client.on('error', (err) => {
+        console.error('Database client error:', err);
+      });
     });
 
-    return globalPool;
+    // Test the connection synchronously
+    try {
+      const client = globalPool.connect();
+      client.then(c => c.release());
+    } catch (err) {
+      console.error('Error testing database connection:', err);
+      globalPool = null;
+    }
   }
+  
+  if (!globalPool) {
+    throw new Error("Failed to initialize database connection");
+  }
+  
   return globalPool;
+}
+
+export async function closeDb() {
+  if (globalPool) {
+    await globalPool.end();
+    globalPool = null;
+  }
 }
 
 export async function insertPost(post: {
