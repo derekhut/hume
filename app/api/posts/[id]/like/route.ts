@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, Request } from "next/server";
 import { getDb } from "@/utils/db";
 
 export async function POST(
-  request: NextRequest,
+  _request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Await the params to fix the Next.js warning
-    const { id } = await Promise.resolve(params);
+    // Get the post ID from the URL
+    const { id } = params;
 
     const db = getDb();
     if (!db) {
@@ -44,7 +44,8 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred",
+        error:
+          error instanceof Error ? error.message : "Unknown error occurred",
       },
       { status: 500 }
     );

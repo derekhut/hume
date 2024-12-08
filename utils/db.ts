@@ -30,7 +30,10 @@ let globalPool: Pool;
 export function getDb() {
   if (!globalPool) {
     const connectionString = process.env.POSTGRES_URL;
-    console.log("connectionString: ", connectionString);
+    if (!connectionString) {
+      throw new Error("POSTGRES_URL environment variable is not set");
+    }
+    console.log("Initializing database connection...");
 
     globalPool = new Pool({
       connectionString,
@@ -41,6 +44,15 @@ export function getDb() {
 
     globalPool.on('error', (err) => {
       console.error('Unexpected error on idle client', err);
+    });
+
+    // Test the connection
+    globalPool.query('SELECT NOW()', (err, res) => {
+      if (err) {
+        console.error('Error testing database connection:', err);
+      } else {
+        console.log('Database connection successful');
+      }
     });
 
     return globalPool;
