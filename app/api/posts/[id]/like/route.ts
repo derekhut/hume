@@ -1,13 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/utils/db";
 
 export async function POST(
-  request: Request,
-  context: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
     // Await the params to fix the Next.js warning
-    const { id } = await Promise.resolve(context.params);
+    const { id } = await Promise.resolve(params);
 
     const db = getDb();
     if (!db) {
