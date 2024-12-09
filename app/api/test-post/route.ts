@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { insertPost, getDb } from "@/utils/db";
+import { generateAvatarUrl } from "@/utils/random";
 
 // Function to generate a random UUID (for testing only)
 function generateTestUserId() {
@@ -24,7 +25,7 @@ export async function GET() {
       VALUES ($1, $2)
       RETURNING id
       `,
-      ['testuser', 'https://api.dicebear.com/7.x/avataaars/svg?seed=testuser']
+      ['testuser', generateAvatarUrl('testuser')]
     );
 
     const userId = userResult.rows[0].id;

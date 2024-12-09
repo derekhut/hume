@@ -13,7 +13,8 @@ interface Comment {
   user_id: string;
   content: string;
   created_at: string;
-  user?: User;
+  username: string;
+  avatar_url: string | null;
 }
 
 interface Post {
@@ -30,10 +31,10 @@ interface Post {
 interface PostProps {
   post: Post;
   onLike: () => void;
-  onAddComment: (comment: string) => void;
+  onComment: (comment: string) => void;
 }
 
-const Post: FC<PostProps> = ({ post, onLike, onAddComment }) => {
+const Post: FC<PostProps> = ({ post, onLike, onComment }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [showComments, setShowComments] = useState(false);
@@ -47,7 +48,7 @@ const Post: FC<PostProps> = ({ post, onLike, onAddComment }) => {
 
   const handleAddComment = () => {
     if (commentText.trim()) {
-      onAddComment(commentText);
+      onComment(commentText);
       setCommentText("");
     }
   };
@@ -150,10 +151,10 @@ const Post: FC<PostProps> = ({ post, onLike, onAddComment }) => {
           {post.comments?.map((comment) => (
             <div key={comment.id} className="flex space-x-3">
               <div className="w-8 h-8 rounded-full bg-gray-600 overflow-hidden relative">
-                {comment.user?.avatar_url ? (
+                {comment.avatar_url ? (
                   <Image
-                    src={comment.user.avatar_url}
-                    alt={comment.user.username}
+                    src={comment.avatar_url}
+                    alt={comment.username}
                     fill
                     className="object-cover"
                   />
@@ -164,7 +165,7 @@ const Post: FC<PostProps> = ({ post, onLike, onAddComment }) => {
               <div>
                 <div className="flex items-center space-x-2">
                   <h4 className="text-white font-medium text-sm">
-                    {comment.user?.username || "Anonymous"}
+                    {comment.username || "Anonymous"}
                   </h4>
                   <span className="text-gray-400 text-xs">
                     {new Date(comment.created_at).toLocaleString()}

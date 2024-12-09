@@ -8,6 +8,30 @@ export const generateRandomUsername = () => {
   return `${adjective}${noun}${number}`;
 };
 
-export const generateRandomAvatar = () => {
-  return `https://api.dicebear.com/8.x/avataaars/svg?seed=${Math.random()}`;
-};
+export function generateRandomId(): string {
+  return Math.random().toString(36).substring(2, 15);
+}
+
+export function generateAvatarUrl(seed?: string): string {
+  // Generate a random size between 150 and 200 pixels
+  const size = Math.floor(Math.random() * 51) + 150;
+  return `https://i.pravatar.cc/${size}`;
+}
+
+export function getAvatarUrl(userAvatarUrl?: string | null): string {
+  if (!userAvatarUrl) {
+    return '/default-avatar.png';
+  }
+  return userAvatarUrl;
+}
+
+// Simple string hash function
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash;
+}

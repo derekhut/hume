@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import { generateAvatarUrl } from "./random";
 
 export type Post = {
   id: string;
@@ -33,43 +34,49 @@ export function getDb(): Pool {
     if (!connectionString) {
       throw new Error("POSTGRES_URL environment variable is not set");
     }
-    console.log("Initializing database connection...");
+    console.log("Initializing database connection pool...");
 
     globalPool = new Pool({
       connectionString,
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
-      ssl: process.env.NODE_ENV === 'production' ? {
-        rejectUnauthorized: false
-      } : undefined
+      ssl:
+        process.env.NODE_ENV === "production"
+          ? {
+              rejectUnauthorized: false,
+            }
+          : undefined,
     });
 
-    globalPool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err);
+    globalPool.on("error", (err) => {
+      console.error("Unexpected error on idle client", err);
       globalPool = null;
     });
 
-    globalPool.on('connect', (client) => {
-      client.on('error', (err) => {
-        console.error('Database client error:', err);
+    globalPool.on("connect", (client) => {
+      client.on("error", (err) => {
+        console.error("Database client error:", err);
       });
     });
 
-    // Test the connection synchronously
-    try {
-      const client = globalPool.connect();
-      client.then(c => c.release());
-    } catch (err) {
-      console.error('Error testing database connection:', err);
-      globalPool = null;
-    }
+    // Test the connection
+    globalPool
+      .connect()
+      .then((client) => {
+        console.log("Successfully connected to database");
+        client.release();
+      })
+      .catch((err) => {
+        console.error("Error testing database connection:", err);
+        globalPool = null;
+      });
   }
-  
+
   if (!globalPool) {
     throw new Error("Failed to initialize database connection");
   }
-  
+
   return globalPool;
 }
 
@@ -150,10 +157,9 @@ export async function getPostWithComments(postId: string) {
   }
 
   // Get post
-  const postResult = await db.query(
-    `SELECT * FROM posts WHERE id = $1`,
-    [postId]
-  );
+  const postResult = await db.query(`SELECT * FROM posts WHERE id = $1`, [
+    postId,
+  ]);
   const post = postResult.rows[0] as Post;
 
   if (!post) {
@@ -170,7 +176,7 @@ export async function getPostWithComments(postId: string) {
 
   return {
     ...post,
-    comments: commentsResult.rows as Comment[]
+    comments: commentsResult.rows as Comment[],
   };
 }
 
@@ -180,21 +186,39 @@ export async function getAllPosts() {
     throw new Error("Database connection is undefined");
   }
 
-  // Get all posts
+  // Get all posts with user information
   const postsResult = await db.query(
-    `SELECT * FROM posts ORDER BY created_at DESC`
+    `
+    SELECT 
+      p.*,
+      u.username,
+      u.avatar_url,
+      u.nickname
+    FROM posts p
+    LEFT JOIN users u ON p.user_id = u.id
+    ORDER BY p.created_at DESC
+    `
   );
 
   const posts = postsResult.rows;
 
   // If we have posts, get their comments
   if (posts.length > 0) {
-    const postIds = posts.map(post => post.id);
+    const postIds = posts.map((post) => post.id);
 
+    // Get comments with user information
     const commentsResult = await db.query(
-      `SELECT * FROM comments 
-       WHERE post_id = ANY($1::uuid[])
-       ORDER BY created_at ASC`,
+      `
+      SELECT 
+        c.*,
+        u.username,
+        u.avatar_url,
+        u.nickname
+      FROM comments c
+      LEFT JOIN users u ON c.user_id = u.id
+      WHERE c.post_id = ANY($1::uuid[])
+      ORDER BY c.created_at ASC
+      `,
       [postIds]
     );
 
@@ -205,24 +229,26 @@ export async function getAllPosts() {
       if (!acc[comment.post_id]) {
         acc[comment.post_id] = [];
       }
-      acc[comment.post_id].push(comment);
+      acc[comment.post_id].push({
+        ...comment,
+        username: comment.nickname || comment.username,
+        avatar_url: comment.avatar_url,
+      });
       return acc;
     }, {} as Record<string, any[]>);
 
     // Add comments to each post
-    return posts.map(post => ({
+    return posts.map((post) => ({
       ...post,
-      username: `User ${post.id.slice(0, 8)}`,  // Generate a simple username
-      avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.id}`,  // Generate an avatar
-      comments: commentsByPost[post.id] || []
+      username: post.nickname || post.username,
+      comments: commentsByPost[post.id] || [],
     }));
   }
 
-  // If no posts, return empty array with generated usernames and avatars
-  return posts.map(post => ({
+  // If no posts, return empty array
+  return posts.map((post) => ({
     ...post,
-    username: `User ${post.id.slice(0, 8)}`,
-    avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.id}`,
-    comments: []
+    username: post.nickname || post.username,
+    comments: [],
   }));
 }

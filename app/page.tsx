@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import CreatePost from './components/CreatePost';
 import PostComponent from './components/Post';
 import TopBanner from './components/TopBanner';
+import UserProfile from './components/UserProfile';
 
 interface Comment {
   id: string;
@@ -30,6 +32,37 @@ interface Post {
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const router = useRouter();
+
+  // Check authentication and fetch profile
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (!user) {
+      router.replace('/login');
+    } else {
+      try {
+        // Use the actual username from localStorage
+        fetch(`/api/users/${user}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              setProfile(data.profile);
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching profile:', error);
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        setIsLoading(false);
+      }
+    }
+  }, [router]);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -49,104 +82,77 @@ export default function Home() {
 
   // Initial fetch
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    if (!isLoading) {
+      fetchPosts();
+    }
+  }, [fetchPosts, isLoading]);
 
   const handleCreatePost = async (content: string, image?: File) => {
     try {
       let image_url = null;
       
+      // If there's an image, upload it first
       if (image) {
-        try {
-          // Create FormData and append the file
-          const formData = new FormData();
-          formData.append('file', image);
-
-          // Upload to server
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          });
-
-          if (!response.ok) {
-            throw new Error('Upload failed');
-          }
-
-          const data = await response.json();
-          image_url = data.url;
-        } catch (uploadError) {
-          console.error('Upload failed:', uploadError instanceof Error ? uploadError.message : 'Unknown error');
-          // Create a temporary URL for the image
-          image_url = URL.createObjectURL(image);
+        const formData = new FormData();
+        formData.append('file', image);
+        
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        const uploadData = await uploadResponse.json();
+        if (uploadData.success) {
+          image_url = uploadData.url;
         }
       }
 
-      // Create post
+      // Create the post
       const response = await fetch('/api/posts/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          content,
+        body: JSON.stringify({ 
+          content, 
           image_url,
+          user_id: profile.id // Use user ID instead of username
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create post');
-      }
-
       const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to create post');
-      }
 
-      // Add the new post to the state
-      setPosts(prevPosts => [data.post, ...prevPosts]);
-    } catch (err) {
-      console.error('Error creating post:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create post');
+      if (data.success) {
+        fetchPosts(); // Refresh the posts after creating a new one
+      } else {
+        setError('Failed to create post');
+      }
+    } catch (error) {
+      setError('Failed to create post');
+      console.error('Error creating post:', error);
     }
   };
 
-  const handleAddComment = async (postId: string, content: string) => {
+  const handleCreateComment = async (postId: string, content: string) => {
     try {
-      const response = await fetch('/api/comments/create', {
+      const response = await fetch(`/api/posts/${postId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          post_id: postId,
-          content,
-        }),
+        body: JSON.stringify({ content, userId: profile.id }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create comment');
-      }
-
       const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to create comment');
-      }
 
-      // Add comment to local state
-      setPosts(prevPosts =>
-        prevPosts.map(post => {
-          if (post.id === postId) {
-            return {
-              ...post,
-              comments: [...post.comments, data.comment]
-            };
-          }
-          return post;
-        })
-      );
-    } catch (err) {
-      console.error('❌ Error adding comment:', err);
-      setError('Failed to add comment. Please try again.');
+      if (data.success) {
+        fetchPosts(); // Refresh the posts after creating a new comment
+      } else {
+        setError('Failed to create comment');
+      }
+    } catch (error) {
+      setError('Failed to create comment');
+      console.error('Error creating comment:', error);
     }
   };
 
@@ -156,27 +162,22 @@ export default function Home() {
         method: 'POST',
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to like post');
-      }
-
       const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to like post');
-      }
 
-      setPosts(prevPosts =>
-        prevPosts.map(post =>
-          post.id === postId
-            ? { ...post, likes_count: post.likes_count + 1 }
-            : post
-        )
-      );
-    } catch (err) {
-      console.error('Error liking post:', err);
-      setError(err instanceof Error ? err.message : 'Failed to like post');
+      if (data.success) {
+        fetchPosts(); // Refresh the posts after liking
+      } else {
+        setError('Failed to like post');
+      }
+    } catch (error) {
+      setError('Failed to like post');
+      console.error('Error liking post:', error);
     }
   };
+
+  if (isLoading) {
+    return null;
+  }
 
   if (error) {
     return <div className="text-red-500 p-4">{error}</div>;
@@ -185,25 +186,26 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-white">
       <TopBanner onRefresh={fetchPosts} />
-      <div className="p-4 md:p-8">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <CreatePost onSubmit={handleCreatePost} />
-          
-          {error && (
-            <div className="p-4 text-red-500 bg-red-100 rounded">
-              {error}
-            </div>
-          )}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="flex gap-6">
+          {/* Left sidebar with profile */}
+          <div className="w-80 flex-shrink-0">
+            {profile && <UserProfile profile={profile} />}
+          </div>
 
-          <div className="space-y-6">
-            {posts.map((post) => (
-              <PostComponent 
-                key={post.id} 
-                post={post}
-                onLike={() => handleLike(post.id)}
-                onAddComment={(content) => handleAddComment(post.id, content)}
-              />
-            ))}
+          {/* Main content */}
+          <div className="flex-1">
+            <CreatePost onSubmit={handleCreatePost} />
+            <div className="space-y-6 mt-6">
+              {posts.map((post) => (
+                <PostComponent
+                  key={post.id}
+                  post={post}
+                  onComment={(content) => handleCreateComment(post.id, content)}
+                  onLike={() => handleLike(post.id)}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
