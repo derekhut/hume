@@ -87,14 +87,21 @@ export async function POST(request: Request) {
     console.log("Created new user:", newUser);
 
     // Mark invitation as used
-    const { error: inviteError } = await supabase
+    const updateData = {
+      is_used: true,
+      used_by: newUser.id,
+      used_at: new Date().toISOString(),
+    };
+    console.log("Updating invitation with data:", updateData);
+
+    const { data: updatedInvitation, error: inviteError } = await supabase
       .from("invitations")
-      .update({
-        is_used: true,
-        used_by: newUser.id,
-        used_at: new Date().toISOString(),
-      })
-      .eq("id", invitation.id);
+      .update(updateData)
+      .eq("id", invitation.id)
+      .select()
+      .single();
+
+    console.log("Update result:", { updatedInvitation, error: inviteError });
 
     if (inviteError) {
       console.error("Error updating invitation:", inviteError);
