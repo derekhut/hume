@@ -15,98 +15,104 @@ const supabase = createClient(
 
 export async function POST(request: Request) {
   try {
-    const { username, invitationCode } = await request.json();
-    console.log("Received request:", { username, invitationCode });
+    const body = await request.json();
+    console.log("Received request:", body);
 
-    // Validate input
-    if (!username || !invitationCode) {
-      return NextResponse.json(
-        { message: "Username and invitation code are required" },
-        { status: 400 }
-      );
+    // Handle existing user login (username only)
+    if ("username" in body) {
+      const { username } = body;
+      if (!username) {
+        return NextResponse.json(
+          { message: "Username is required" },
+          { status: 400 }
+        );
+      }
+
+      // Check if username exists
+      const { data: existingUser, error: userError } = await supabase
+        .from("users")
+        .select("id, username, is_active")
+        .eq("username", username)
+        .single();
+
+      if (userError || !existingUser) {
+        return NextResponse.json(
+          { message: "User not found" },
+          { status: 404 }
+        );
+      }
+
+      if (!existingUser.is_active) {
+        return NextResponse.json(
+          { message: "Account is inactive" },
+          { status: 403 }
+        );
+      }
+
+      return NextResponse.json({ 
+        success: true,
+        user: {
+          id: existingUser.id,
+          username: existingUser.username
+        }
+      });
     }
 
-    // Check if username exists
-    const { data: existingUser, error: userError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("username", username)
-      .single();
+    // Handle new user registration (invitation code only)
+    if ("invitationCode" in body) {
+      const { invitationCode } = body;
+      if (!invitationCode) {
+        return NextResponse.json(
+          { message: "Invitation code is required" },
+          { status: 400 }
+        );
+      }
 
-    console.log("Existing user:", existingUser, "Error:", userError);
+      // Check invitation code
+      const { data: invitation, error: invitationError } = await supabase
+        .from("invitations")
+        .select("*")
+        .eq("invitation_code", invitationCode)
+        .single();
 
-    // Check invitation code
-    const { data: invitation, error: invitationError } = await supabase
-      .from("invitations")
-      .select("*")
-      .eq("invitation_code", invitationCode)
-      .single();
+      if (invitationError || !invitation) {
+        return NextResponse.json(
+          { message: "Invalid invitation code" },
+          { status: 400 }
+        );
+      }
 
-    console.log("Invitation:", invitation, "Error:", invitationError);
+      // Check if code is already used
+      if (invitation.is_used) {
+        return NextResponse.json(
+          { message: "Invitation code has already been used" },
+          { status: 400 }
+        );
+      }
 
-    if (invitationError || !invitation) {
-      return NextResponse.json(
-        { message: "Invalid invitation code" },
-        { status: 400 }
-      );
+      // Check if code is expired
+      if (new Date(invitation.expires_at) < new Date()) {
+        return NextResponse.json(
+          { message: "Invitation code has expired" },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({ 
+        success: true,
+        invitation: {
+          id: invitation.id,
+          school_id: invitation.school_id,
+          inviter_id: invitation.inviter_id
+        }
+      });
     }
 
-    // Check if code is already used
-    if (invitation.is_used) {
-      return NextResponse.json(
-        { message: "Invitation code has already been used" },
-        { status: 400 }
-      );
-    }
+    return NextResponse.json(
+      { message: "Invalid request body" },
+      { status: 400 }
+    );
 
-    // Check if code is expired
-    if (new Date(invitation.expires_at) < new Date()) {
-      return NextResponse.json(
-        { message: "Invitation code has expired" },
-        { status: 400 }
-      );
-    }
-
-    if (existingUser) {
-      // If user exists, just return success
-      return NextResponse.json({ success: true });
-    }
-
-    // Create new user
-    const { data: newUser, error: createUserError } = await supabase
-      .from("users")
-      .insert([{ username, is_active: true }])
-      .select()
-      .single();
-
-    if (createUserError) {
-      console.error("Error creating user:", createUserError);
-      throw createUserError;
-    }
-
-    console.log("Created new user:", newUser);
-
-    // Mark invitation as used
-    const updateData = {
-      is_used: true
-    };
-    console.log("Updating invitation with data:", updateData);
-
-    const { data: updatedInvitation, error: inviteError } = await supabase
-      .from("invitations")
-      .update(updateData)
-      .eq("id", invitation.id)
-      .select()
-      .single();
-
-    console.log("Update result:", { updatedInvitation, error: inviteError });
-
-    if (inviteError) {
-      console.error("Error updating invitation:", inviteError);
-      throw inviteError;
-    }
-
-    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Login error:", error);
     return NextResponse.json(
