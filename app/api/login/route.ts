@@ -86,11 +86,12 @@ export async function POST(request: Request) {
 
     console.log("Created new user:", newUser);
 
-    // Mark invitation as used
+    // Mark invitation as used with properly formatted timestamp
+    const currentTime = new Date().toISOString();
     const updateData = {
       is_used: true,
       used_by: newUser.id,
-      used_at: new Date().toISOString(),
+      used_at: currentTime
     };
     console.log("Updating invitation with data:", updateData);
 
