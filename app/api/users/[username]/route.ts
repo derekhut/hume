@@ -28,15 +28,18 @@ export async function GET(
         u.avatar_url,
         u.bio,
         u.zodiac,
+        u.school_code,
+        s.name as school_name,
         u.created_at,
         u.updated_at,
         COUNT(DISTINCT p.id) as posts_count,
         COUNT(DISTINCT c.id) as comments_count
       FROM users u
+      LEFT JOIN schools s ON u.school_code = s.code
       LEFT JOIN posts p ON p.user_id = u.id
       LEFT JOIN comments c ON c.user_id = u.id
       WHERE u.username = $1
-      GROUP BY u.id
+      GROUP BY u.id, s.name
       `,
       [username]
     );
@@ -55,19 +58,23 @@ export async function GET(
           avatar_url,
           bio, 
           zodiac, 
+          school_code,
           created_at, 
           updated_at
         `,
         [username]
       );
-      
+
       result = {
         ...insertResult,
-        rows: [{
-          ...insertResult.rows[0],
-          posts_count: '0',
-          comments_count: '0'
-        }]
+        rows: [
+          {
+            ...insertResult.rows[0],
+            school_name: null,
+            posts_count: "0",
+            comments_count: "0",
+          },
+        ],
       };
     }
 

@@ -13,8 +13,8 @@ interface UserProfile {
   mbti: string | null;
   followers_count: number;
   following_count: number;
-  school_id: string;
-  school_name: string;
+  school_code: string;
+  school_name: string | null;
   interests: string | null;
 }
 

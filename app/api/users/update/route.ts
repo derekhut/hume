@@ -6,7 +6,7 @@ export async function PUT(request: Request) {
     const {
       username,
       nickname,
-      school_id,
+      school_code,
       zodiac,
       mbti,
       bio,
@@ -25,7 +25,7 @@ export async function PUT(request: Request) {
       UPDATE users 
       SET 
         nickname = $1,
-        school_id = $2,
+        school_code = $2,
         zodiac = $3,
         mbti = $4,
         bio = $5,
@@ -34,7 +34,7 @@ export async function PUT(request: Request) {
       WHERE username = $8
       RETURNING *
       `,
-      [nickname, school_id, zodiac, mbti, bio, interests, avatar_url, username]
+      [nickname, school_code, zodiac, mbti, bio, interests, avatar_url, username]
     );
 
     if (result.rows.length === 0) {
@@ -44,12 +44,12 @@ export async function PUT(request: Request) {
       );
     }
 
-    // Get school name if school_id is present
+    // Get school name if school_code is present
     let schoolName = null;
-    if (result.rows[0].school_id) {
+    if (result.rows[0].school_code) {
       const schoolResult = await db.query(
-        'SELECT name FROM schools WHERE id = $1',
-        [result.rows[0].school_id]
+        'SELECT name FROM schools WHERE code = $1',
+        [result.rows[0].school_code]
       );
       if (schoolResult.rows.length > 0) {
         schoolName = schoolResult.rows[0].name;

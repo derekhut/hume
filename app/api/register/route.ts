@@ -1,120 +1,70 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
-// Initialize Supabase client with service role for admin operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 export async function POST(request: Request) {
   try {
-    const { username, gender, birthday, invitationCode } = await request.json();
-    console.log("Received registration request:", {
+    const formData = await request.json();
+    const nickname = formData.nickname;
+    const school_code = formData.school_code;
+    const gender = formData.gender === 0 ? "female" : "male"; 
+    const birthday = formData.birthday;
+
+    // Generate a random 4-digit username
+    const username = Math.floor(1000 + Math.random() * 9000).toString();
+
+    // Verify school code exists
+    const { data: school, error: schoolError } = await supabase
+      .from("schools")
+      .select("code")
+      .eq("code", school_code)
+      .single();
+
+    if (schoolError || !school) {
+      return NextResponse.json(
+        { error: "Invalid school code" },
+        { status: 400 }
+      );
+    }
+
+    // Create the user with all information
+    const { error: insertError } = await supabase.from("users").insert({
       username,
+      nickname,
+      school_code,
       gender,
       birthday,
-      invitationCode,
+      updated_at: new Date().toISOString(),
     });
 
-    // Validate input
-    if (!username || !gender || !birthday || !invitationCode) {
+    if (insertError) {
       return NextResponse.json(
-        { message: "All fields are required" },
-        { status: 400 }
+        { error: "Failed to create user" },
+        { status: 500 }
       );
     }
 
-    // Check if username exists
-    const { data: existingUser, error: userError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("username", username)
-      .single();
-
-    if (existingUser) {
-      return NextResponse.json(
-        { message: "Username already exists" },
-        { status: 400 }
-      );
-    }
-
-    // Check invitation code
-    const { data: invitation, error: invitationError } = await supabase
-      .from("invitations")
-      .select("*")
-      .eq("invitation_code", invitationCode)
-      .single();
-
-    if (invitationError || !invitation) {
-      return NextResponse.json(
-        { message: "Invalid invitation code" },
-        { status: 400 }
-      );
-    }
-
-    // Check if code is already used
-    if (invitation.is_used) {
-      return NextResponse.json(
-        { message: "Invitation code has already been used" },
-        { status: 400 }
-      );
-    }
-
-    // Check if code is expired
-    if (new Date(invitation.expires_at) < new Date()) {
-      return NextResponse.json(
-        { message: "Invitation code has expired" },
-        { status: 400 }
-      );
-    }
-
-    // Create new user
-    const { data: newUser, error: createUserError } = await supabase
-      .from("users")
-      .insert([
-        {
-          username,
-          gender,
-          birthday,
-          is_active: true,
-          invited_by: invitation.inviter_id,
-          school_id: invitation.school_id,
-        },
-      ])
-      .select()
-      .single();
-
-    if (createUserError) {
-      console.error("Error creating user:", createUserError);
-      throw createUserError;
-    }
-
-    console.log("Created new user:", newUser);
-
-    // Mark invitation as used
-    const { error: inviteError } = await supabase
+    // Update invitation code status to used
+    const { error: updateError } = await supabase
       .from("invitations")
       .update({ is_used: true })
-      .eq("id", invitation.id);
+      .eq("invitation_code", formData.invitation_code);
 
-    if (inviteError) {
-      console.error("Error updating invitation:", inviteError);
-      throw inviteError;
+    if (updateError) {
+      console.error("Failed to update invitation status:", updateError);
+      // We don't return error here as user is already created
     }
 
-    return NextResponse.json({ success: true, user: newUser });
-  } catch (error: any) {
+    return NextResponse.json({
+      message: "Registration successful",
+      username,
+    });
+  } catch (error) {
     console.error("Registration error:", error);
-    return NextResponse.json(
-      { message: error.message || "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Registration failed" }, { status: 500 });
   }
 }
