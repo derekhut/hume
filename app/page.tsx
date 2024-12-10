@@ -102,8 +102,11 @@ export default function Home() {
         });
         
         const uploadData = await uploadResponse.json();
-        if (uploadData.success) {
+        if (uploadData.url) {
           image_url = uploadData.url;
+        } else {
+          console.error('Upload failed:', uploadData);
+          throw new Error('Failed to upload image');
         }
       }
 

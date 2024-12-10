@@ -10,10 +10,10 @@ export async function POST(request: Request) {
   try {
     const formData = await request.json();
     console.log("Received registration data:", formData);
-    
+
     const nickname = formData.nickname;
     const school_code = formData.school_code;
-    const gender = formData.gender === 0 ? "female" : "male"; 
+    const gender = formData.gender === 0 ? "female" : "male";
     const birthday = formData.birthday;
 
     // Generate a random 4-digit username
