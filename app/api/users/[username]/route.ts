@@ -19,8 +19,8 @@ export async function GET(
     const db = getDb();
 
     // First try to find existing user
-    let result = await db.query(
-      `
+    const currentUser = request.headers.get("x-user");
+    const query = `
       SELECT 
         u.id,
         u.username,
@@ -32,62 +32,64 @@ export async function GET(
         s.name as school_name,
         u.created_at,
         u.updated_at,
-        COUNT(DISTINCT p.id) as posts_count,
-        COUNT(DISTINCT c.id) as comments_count
+        (SELECT COUNT(*) FROM followers WHERE following_id = u.id) as followers_count,
+        (SELECT COUNT(*) FROM followers WHERE follower_id = u.id) as following_count,
+        EXISTS(
+          SELECT 1 FROM followers f3 
+          WHERE f3.follower_id = (
+            SELECT id FROM users WHERE username = $2
+          )
+          AND f3.following_id = u.id
+        ) as is_following
       FROM users u
       LEFT JOIN schools s ON u.school_code = s.code
-      LEFT JOIN posts p ON p.user_id = u.id
-      LEFT JOIN comments c ON c.user_id = u.id
       WHERE u.username = $1
       GROUP BY u.id, s.name
-      `,
-      [username]
+    `;
+    let result = await db.query(
+      query,
+      [username, currentUser || ""] // Pass current user for is_following check
     );
 
     // If user doesn't exist, create a new one with default avatar
     if (result.rowCount === 0) {
-      // Insert new user with default avatar
+      const defaultAvatar = `https://api.dicebear.com/7.x/thumbs/svg?seed=${username}`;
       const insertResult = await db.query(
         `
-        INSERT INTO users (username, nickname, bio, avatar_url)
-        VALUES ($1, $1, 'New user', '/default-avatar.png')
-        RETURNING 
-          id, 
-          username, 
-          nickname, 
-          avatar_url,
-          bio, 
-          zodiac, 
-          school_code,
-          created_at, 
-          updated_at
+        INSERT INTO users (username, avatar_url)
+        VALUES ($1, $2)
+        RETURNING *
         `,
-        [username]
+        [username, defaultAvatar]
       );
 
       result = {
-        ...insertResult,
         rows: [
           {
             ...insertResult.rows[0],
             school_name: null,
-            posts_count: "0",
-            comments_count: "0",
+            followers_count: 0,
+            following_count: 0,
+            is_following: false,
           },
         ],
+        command: 'SELECT',
+        rowCount: 1,
+        oid: 0,
+        fields: [],
       };
     }
 
-    if (result.rowCount === 0) {
-      return NextResponse.json(
-        { error: "User not found and could not be created" },
-        { status: 404 }
-      );
-    }
+    // Convert count fields to numbers
+    const profile = {
+      ...result.rows[0],
+      followers_count: parseInt(result.rows[0].followers_count),
+      following_count: parseInt(result.rows[0].following_count)
+    };
 
     return NextResponse.json({
       success: true,
-      profile: result.rows[0],
+      profile
     });
   } catch (error) {
     console.error("Error in GET /api/users/[username]:", error);

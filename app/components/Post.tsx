@@ -1,5 +1,6 @@
 import { FC, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 interface User {
   id: string;
@@ -59,20 +60,24 @@ const Post: FC<PostProps> = ({ post, onLike, onComment }) => {
   return (
     <div className="w-full max-w-2xl bg-gray-800 rounded-lg p-4">
       <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 rounded-full bg-gray-600 overflow-hidden relative">
-          {post.avatar_url ? (
-            <Image
-              src={post.avatar_url}
-              alt={post.username}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-500" />
-          )}
-        </div>
+        <Link href={`/users/${encodeURIComponent(post.username)}`}>
+          <div className="w-10 h-10 rounded-full bg-gray-600 overflow-hidden relative cursor-pointer">
+            {post.avatar_url ? (
+              <Image
+                src={post.avatar_url}
+                alt={post.username}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-500" />
+            )}
+          </div>
+        </Link>
         <div>
-          <h3 className="text-white font-medium">{post.username}</h3>
+          <Link href={`/users/${encodeURIComponent(post.username)}`}>
+            <h3 className="text-white font-medium hover:underline">{post.username}</h3>
+          </Link>
           <p className="text-gray-400 text-sm">{formattedDate}</p>
         </div>
       </div>

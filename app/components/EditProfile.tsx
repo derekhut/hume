@@ -149,10 +149,10 @@ export default function EditProfile({ onClose, currentProfile }: EditProfileProp
             <div>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/gif,image/webp"
                 onChange={handleAvatarChange}
-                ref={fileInputRef}
                 className="hidden"
+                ref={fileInputRef}
               />
               <button
                 type="button"

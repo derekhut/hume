@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import EditProfile from './EditProfile';
+import { useState } from "react";
+import EditProfile from "./EditProfile";
 
 interface UserProfile {
   id: string;
@@ -16,6 +16,7 @@ interface UserProfile {
   school_code: string;
   school_name: string | null;
   interests: string | null;
+  is_following: boolean;
 }
 
 export default function UserProfile({ profile }: { profile: UserProfile }) {
@@ -29,7 +30,7 @@ export default function UserProfile({ profile }: { profile: UserProfile }) {
             {/* Avatar */}
             <div className="flex-shrink-0">
               <img
-                src={profile.avatar_url || '/default-avatar.png'}
+                src={profile.avatar_url || "/default-avatar.png"}
                 alt={profile.username}
                 className="w-16 h-16 rounded-full"
               />
@@ -40,7 +41,9 @@ export default function UserProfile({ profile }: { profile: UserProfile }) {
               <h2 className="text-xl font-bold truncate">
                 {profile.nickname || profile.username}
               </h2>
-              <p className="text-gray-400 mt-1">@{profile.school_name || '未设置学校'}</p>
+              <p className="text-gray-400 mt-1">
+                @{profile.school_name || "未设置学校"}
+              </p>
               <div className="flex space-x-3 mt-1 text-sm">
                 {profile.zodiac && (
                   <span className="text-gray-300">{profile.zodiac}</span>
@@ -55,8 +58,7 @@ export default function UserProfile({ profile }: { profile: UserProfile }) {
           {/* Edit Button */}
           <button
             onClick={() => setIsEditing(true)}
-            className="px-3 py-1 text-sm rounded-md bg-gray-700 text-white hover:bg-gray-600"
-          >
+            className="px-3 py-1 text-sm rounded-md bg-gray-700 text-white hover:bg-gray-600">
             编辑
           </button>
         </div>
@@ -64,20 +66,22 @@ export default function UserProfile({ profile }: { profile: UserProfile }) {
         {/* Stats */}
         <div className="flex justify-start space-x-6 mt-4 text-sm">
           <div>
-            <span className="font-semibold text-white">{profile.following_count}</span>
+            <span className="font-semibold text-white">
+              {profile.following_count}
+            </span>
             <span className="text-gray-400 ml-1">关注</span>
           </div>
           <div>
-            <span className="font-semibold text-white">{profile.followers_count}</span>
+            <span className="font-semibold text-white">
+              {profile.followers_count}
+            </span>
             <span className="text-gray-400 ml-1">被关注</span>
           </div>
         </div>
 
         {/* Bio */}
         {profile.bio && (
-          <div className="mt-4 text-sm text-gray-300">
-            {profile.bio}
-          </div>
+          <div className="mt-4 text-sm text-gray-300">{profile.bio}</div>
         )}
 
         {/* Interests */}
@@ -85,26 +89,25 @@ export default function UserProfile({ profile }: { profile: UserProfile }) {
           <div className="mt-4">
             <p className="text-sm text-gray-400">兴趣爱好:</p>
             <div className="flex flex-wrap gap-2 mt-2">
-              {profile.interests.split(',').map((interest, index) => (
+              {profile.interests.split(",").map((interest, index) => (
                 <span
                   key={index}
-                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-800 text-gray-300"
-                >
+                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-800 text-gray-300">
                   {interest.trim()}
                 </span>
               ))}
             </div>
           </div>
         )}
-      </div>
 
-      {/* Edit Profile Modal */}
-      {isEditing && (
-        <EditProfile
-          currentProfile={profile}
-          onClose={() => setIsEditing(false)}
-        />
-      )}
+        {/* Edit Profile Modal */}
+        {isEditing && (
+          <EditProfile
+            currentProfile={profile}
+            onClose={() => setIsEditing(false)}
+          />
+        )}
+      </div>
     </>
   );
 }

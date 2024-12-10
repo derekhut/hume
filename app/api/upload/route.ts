@@ -19,6 +19,24 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: '只支持 JPG、PNG、GIF 和 WebP 格式的图片' },
+        { status: 400 }
+      );
+    }
+
+    // Check file size (e.g., 5MB limit)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: '图片大小不能超过 5MB' },
+        { status: 400 }
+      );
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const filename = `${Date.now()}-${file.name}`;
 

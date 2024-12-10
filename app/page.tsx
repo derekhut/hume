@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import CreatePost from './components/CreatePost';
-import PostComponent from './components/Post';
-import TopBanner from './components/TopBanner';
-import UserProfile from './components/UserProfile';
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import CreatePost from "./components/CreatePost";
+import PostComponent from "./components/Post";
+import TopBanner from "./components/TopBanner";
+import UserProfile from "./components/UserProfile";
 
 interface Comment {
   id: string;
@@ -38,27 +38,27 @@ export default function Home() {
 
   // Check authentication and fetch profile
   useEffect(() => {
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem("user");
     if (!user) {
-      router.replace('/login');
+      router.replace("/login");
     } else {
       try {
         // Use the actual username from localStorage
         fetch(`/api/users/${user}`)
-          .then(response => response.json())
-          .then(data => {
+          .then((response) => response.json())
+          .then((data) => {
             if (data.success) {
               setProfile(data.profile);
             }
           })
-          .catch(error => {
-            console.error('Error fetching profile:', error);
+          .catch((error) => {
+            console.error("Error fetching profile:", error);
           })
           .finally(() => {
             setIsLoading(false);
           });
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error("Error fetching profile:", error);
         setIsLoading(false);
       }
     }
@@ -66,17 +66,17 @@ export default function Home() {
 
   const fetchPosts = useCallback(async () => {
     try {
-      const response = await fetch('/api/posts');
+      const response = await fetch("/api/posts");
       const data = await response.json();
-      
+
       if (data.success) {
         setPosts(data.posts);
       } else {
-        setError('Failed to fetch posts');
+        setError("Failed to fetch posts");
       }
     } catch (error) {
-      setError('Failed to fetch posts');
-      console.error('Error fetching posts:', error);
+      setError("Failed to fetch posts");
+      console.error("Error fetching posts:", error);
     }
   }, []);
 
@@ -90,36 +90,36 @@ export default function Home() {
   const handleCreatePost = async (content: string, image?: File) => {
     try {
       let image_url = null;
-      
+
       // If there's an image, upload it first
       if (image) {
         const formData = new FormData();
-        formData.append('file', image);
-        
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
+        formData.append("file", image);
+
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
           body: formData,
         });
-        
+
         const uploadData = await uploadResponse.json();
         if (uploadData.url) {
           image_url = uploadData.url;
         } else {
-          console.error('Upload failed:', uploadData);
-          throw new Error('Failed to upload image');
+          console.error("Upload failed:", uploadData);
+          throw new Error("Failed to upload image");
         }
       }
 
       // Create the post
-      const response = await fetch('/api/posts/create', {
-        method: 'POST',
+      const response = await fetch("/api/posts/create", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
-          content, 
+        body: JSON.stringify({
+          content,
           image_url,
-          user_id: profile.id // Use user ID instead of username
+          user_id: profile.id, // Use user ID instead of username
         }),
       });
 
@@ -128,20 +128,20 @@ export default function Home() {
       if (data.success) {
         fetchPosts(); // Refresh the posts after creating a new one
       } else {
-        setError('Failed to create post');
+        setError("Failed to create post");
       }
     } catch (error) {
-      setError('Failed to create post');
-      console.error('Error creating post:', error);
+      setError("Failed to create post");
+      console.error("Error creating post:", error);
     }
   };
 
   const handleCreateComment = async (postId: string, content: string) => {
     try {
       const response = await fetch(`/api/posts/${postId}/comments`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ content, userId: profile.id }),
       });
@@ -151,18 +151,18 @@ export default function Home() {
       if (data.success) {
         fetchPosts(); // Refresh the posts after creating a new comment
       } else {
-        setError('Failed to create comment');
+        setError("Failed to create comment");
       }
     } catch (error) {
-      setError('Failed to create comment');
-      console.error('Error creating comment:', error);
+      setError("Failed to create comment");
+      console.error("Error creating comment:", error);
     }
   };
 
   const handleLike = async (postId: string) => {
     try {
       const response = await fetch(`/api/posts/${postId}/like`, {
-        method: 'POST',
+        method: "POST",
       });
 
       const data = await response.json();
@@ -170,11 +170,11 @@ export default function Home() {
       if (data.success) {
         fetchPosts(); // Refresh the posts after liking
       } else {
-        setError('Failed to like post');
+        setError("Failed to like post");
       }
     } catch (error) {
-      setError('Failed to like post');
-      console.error('Error liking post:', error);
+      setError("Failed to like post");
+      console.error("Error liking post:", error);
     }
   };
 

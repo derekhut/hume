@@ -77,9 +77,9 @@ const CreatePost: FC<CreatePostProps> = ({ onSubmit }) => {
         <div className="flex space-x-4">
           <input
             type="file"
-            ref={fileInputRef}
-            accept="image/*"
+            accept="image/jpeg,image/png,image/gif,image/webp"
             onChange={handleImageChange}
+            ref={fileInputRef}
             className="hidden"
             id="imageUpload"
           />
