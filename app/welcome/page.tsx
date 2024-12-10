@@ -82,7 +82,13 @@ export default function Welcome() {
         throw new Error("邀请码无效");
       }
 
-      console.log("Sending API request");
+      console.log("Sending API request with data:", {
+        nickname: formData.nickname,
+        school_code: formData.school_code,
+        gender: formData.gender,
+        birthday: formData.birthday,
+        invitation_code: invitationCode,
+      });
       const response = await fetch("/api/register", {
         method: "POST",
         headers: {
@@ -98,6 +104,7 @@ export default function Welcome() {
       });
 
       const data = await response.json();
+      console.log("Response from server:", { status: response.status, data });
 
       if (!response.ok) {
         throw new Error(data.message || "Registration failed");
