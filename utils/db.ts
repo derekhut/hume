@@ -180,15 +180,14 @@ export async function getPostWithComments(postId: string) {
   };
 }
 
-export async function getAllPosts() {
+export async function getAllPosts(username?: string) {
   const db = getDb();
   if (!db) {
     throw new Error("Database connection is undefined");
   }
 
   // Get all posts with user information
-  const postsResult = await db.query(
-    `
+  const query = `
     SELECT 
       p.*,
       u.username,
@@ -196,8 +195,13 @@ export async function getAllPosts() {
       u.nickname
     FROM posts p
     LEFT JOIN users u ON p.user_id = u.id
+    ${username ? 'WHERE u.username = $1' : ''}
     ORDER BY p.created_at DESC
-    `
+  `;
+
+  const postsResult = await db.query(
+    query,
+    username ? [username] : []
   );
 
   const posts = postsResult.rows;

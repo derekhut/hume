@@ -76,7 +76,9 @@ const Post: FC<PostProps> = ({ post, onLike, onComment }) => {
         </Link>
         <div>
           <Link href={`/users/${encodeURIComponent(post.username)}`}>
-            <h3 className="text-white font-medium hover:underline">{post.username}</h3>
+            <h3 className="text-white font-medium hover:underline">
+              {post.username}
+            </h3>
           </Link>
           <p className="text-gray-400 text-sm">{formattedDate}</p>
         </div>
