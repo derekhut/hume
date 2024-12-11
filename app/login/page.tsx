@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { isValidEmail } from "@/utils/auth";
 
 export default function Login() {
   const [isNewUser, setIsNewUser] = useState(false);
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [invitationCode, setInvitationCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +21,17 @@ export default function Login() {
     setIsLoading(true);
 
     try {
+      if (!isNewUser) {
+        // 验证邮箱格式
+        if (!isValidEmail(email)) {
+          throw new Error("请输入有效的邮箱地址");
+        }
+        // 验证密码不为空
+        if (!password) {
+          throw new Error("请输入密码");
+        }
+      }
+
       const response = await fetch("/api/login", {
         method: "POST",
         headers: {
@@ -25,7 +40,10 @@ export default function Login() {
         body: JSON.stringify(
           isNewUser
             ? { invitationCode: invitationCode.trim().toUpperCase() }
-            : { username: username.trim() }
+            : { 
+                email: email.trim().toLowerCase(),
+                password: password
+              }
         ),
       });
 
@@ -41,7 +59,7 @@ export default function Login() {
         router.replace("/welcome");
       } else {
         // Store username and redirect to home
-        localStorage.setItem("user", username);
+        localStorage.setItem("user", data.user.username);
         router.replace("/");
       }
     } catch (err: any) {
@@ -106,20 +124,49 @@ export default function Login() {
               />
             </div>
           ) : (
-            <div className="mb-6">
-              <label htmlFor="username" className="block text-gray-300 mb-2">
-                用户名
-              </label>
-              <input
-                type="text"
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:border-blue-500"
-                placeholder="输入用户名"
-                required
-              />
-            </div>
+            <>
+              <div className="mb-4">
+                <label htmlFor="email" className="block text-gray-300 mb-2">
+                  邮箱
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:border-blue-500"
+                  placeholder="输入邮箱地址"
+                  required
+                />
+              </div>
+              <div className="mb-6">
+                <label htmlFor="password" className="block text-gray-300 mb-2">
+                  密码
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:border-blue-500"
+                    placeholder="输入密码"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon className="w-5 h-5" />
+                    ) : (
+                      <EyeIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </>
           )}
           <button
             type="submit"

@@ -6,7 +6,7 @@ export async function GET() {
     const db = getDb();
     
     const result = await db.query(`
-      SELECT id, name
+      SELECT name, code, created_at
       FROM schools
       ORDER BY name ASC
     `);
