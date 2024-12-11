@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { hashPassword, isValidEmail } from "@/utils/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +16,16 @@ export async function POST(request: Request) {
     const school_code = formData.school_code;
     const gender = formData.gender === 0 ? "female" : "male";
     const birthday = formData.birthday;
+    const email = formData.email;
+    const password = formData.password;
+
+    // 验证邮箱格式
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Invalid email format" },
+        { status: 400 }
+      );
+    }
 
     // Generate a random 4-digit username
     const username = Math.floor(1000 + Math.random() * 9000).toString();
@@ -37,6 +48,9 @@ export async function POST(request: Request) {
       );
     }
 
+    // 加密密码
+    const hashedPassword = await hashPassword(password);
+
     // Create the user with all information
     const { error: insertError } = await supabase.from("users").insert({
       username,
@@ -44,6 +58,8 @@ export async function POST(request: Request) {
       school_code,
       gender,
       birthday,
+      email,
+      password_hash: hashedPassword,
       updated_at: new Date().toISOString(),
     });
 

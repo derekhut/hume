@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { MotionDiv, MotionMain } from "../components/motion";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { isStrongPassword } from "@/utils/auth";
 
 const schools = [{ code: "0001", name: "上海宋庆龄学校" }];
 
@@ -31,7 +33,10 @@ export default function Welcome() {
     gender: -1,
     birthday: "",
     nickname: "",
+    password: "",
+    email: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -88,6 +93,8 @@ export default function Welcome() {
         gender: formData.gender,
         birthday: formData.birthday,
         invitation_code: invitationCode,
+        password: formData.password,
+        email: formData.email,
       });
       const response = await fetch("/api/register", {
         method: "POST",
@@ -100,6 +107,8 @@ export default function Welcome() {
           gender: formData.gender,
           birthday: formData.birthday,
           invitation_code: invitationCode,
+          password: formData.password,
+          email: formData.email,
         }),
       });
 
@@ -338,17 +347,46 @@ export default function Welcome() {
                 </div>
               )}
 
-              <div className="w-full max-w-md mx-auto">
-                <input
-                  type="text"
-                  value={formData.nickname}
-                  onChange={(e) => {
-                    setFormData({ ...formData, nickname: e.target.value });
-                    setError("");
-                  }}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 text-center text-2xl"
-                  placeholder="输入你的昵称"
-                />
+              <div className="w-full max-w-md mx-auto space-y-6">
+                <div>
+                  <input
+                    type="text"
+                    value={formData.nickname}
+                    onChange={(e) => {
+                      setFormData({ ...formData, nickname: e.target.value });
+                      setError("");
+                    }}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 text-center text-2xl"
+                    placeholder="输入你的昵称"
+                  />
+                </div>
+
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => {
+                      setFormData({ ...formData, password: e.target.value });
+                      setError("");
+                    }}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 text-center text-xl"
+                    placeholder="设置你的密码"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon className="w-5 h-5" />
+                    ) : (
+                      <EyeIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-sm text-gray-400">
+                  密码至少需要8位，包含大小写字母和数字
+                </p>
               </div>
 
               <div className="w-full max-w-md mx-auto flex justify-between">
@@ -361,6 +399,74 @@ export default function Welcome() {
                   onClick={() => {
                     if (!formData.nickname) {
                       setError("请输入昵称");
+                      return;
+                    }
+                    if (!formData.password) {
+                      setError("请设置密码");
+                      return;
+                    }
+                    if (!isStrongPassword(formData.password)) {
+                      setError("密码需要至少8位，包含大小写字母和数字");
+                      return;
+                    }
+                    setError("");
+                    setPage(5);
+                  }}
+                  disabled={isLoading}
+                  className="mt-8 p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors text-base w-12 h-12 flex items-center justify-center hover:scale-110 transform duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                  →
+                </button>
+              </div>
+            </MotionDiv>
+          ) : page === 5 ? (
+            <MotionDiv
+              key="email"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8 text-center">
+              <h2 className="text-4xl text-white font-bold tracking-wider mb-12">
+                最后，请输入你的邮箱
+              </h2>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-900/50 border border-red-500 text-red-200 rounded">
+                  {error}
+                </div>
+              )}
+
+              <div className="w-full max-w-md mx-auto space-y-6">
+                <div>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      setError("");
+                    }}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-blue-500 text-center text-xl"
+                    placeholder="输入你的邮箱"
+                  />
+                </div>
+                <p className="text-sm text-gray-400">
+                  邮箱将用于接收重要通知和找回密码
+                </p>
+              </div>
+
+              <div className="w-full max-w-md mx-auto flex justify-between">
+                <button
+                  onClick={() => setPage(4)}
+                  className="mt-8 p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors text-base w-12 h-12 flex items-center justify-center hover:scale-110 transform duration-200">
+                  ←
+                </button>
+                <button
+                  onClick={() => {
+                    if (!formData.email) {
+                      setError("请输入邮箱");
+                      return;
+                    }
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+                      setError("请输入有效的邮箱地址");
                       return;
                     }
                     handleSubmit();

@@ -180,14 +180,63 @@ export async function getPostWithComments(postId: string) {
   };
 }
 
-export async function getAllPosts(username?: string) {
+// 获取帖子的评论
+async function getPostComments(postIds: string[]) {
+  const db = getDb();
+  if (!db) {
+    throw new Error("Database connection is undefined");
+  }
+
+  const commentsResult = await db.query(
+    `
+    SELECT 
+      c.*,
+      u.username,
+      u.avatar_url,
+      u.nickname
+    FROM comments c
+    LEFT JOIN users u ON c.user_id = u.id
+    WHERE c.post_id = ANY($1::uuid[])
+    ORDER BY c.created_at ASC
+    `,
+    [postIds]
+  );
+
+  return commentsResult.rows;
+}
+
+// 处理帖子和评论数据
+function processPostsWithComments(posts: any[], comments: any[]) {
+  // Group comments by post
+  const commentsByPost = comments.reduce((acc, comment) => {
+    if (!acc[comment.post_id]) {
+      acc[comment.post_id] = [];
+    }
+    acc[comment.post_id].push({
+      ...comment,
+      username: comment.nickname || comment.username,
+      avatar_url: comment.avatar_url,
+    });
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  // Add comments to each post
+  return posts.map((post) => ({
+    ...post,
+    username: post.nickname || post.username,
+    comments: commentsByPost[post.id] || [],
+  }));
+}
+
+export async function getAllPosts() {
   const db = getDb();
   if (!db) {
     throw new Error("Database connection is undefined");
   }
 
   // Get all posts with user information
-  const query = `
+  const postsResult = await db.query(
+    `
     SELECT 
       p.*,
       u.username,
@@ -195,64 +244,52 @@ export async function getAllPosts(username?: string) {
       u.nickname
     FROM posts p
     LEFT JOIN users u ON p.user_id = u.id
-    ${username ? 'WHERE u.username = $1' : ''}
     ORDER BY p.created_at DESC
-  `;
-
-  const postsResult = await db.query(
-    query,
-    username ? [username] : []
+    `
   );
 
   const posts = postsResult.rows;
 
   // If we have posts, get their comments
   if (posts.length > 0) {
-    const postIds = posts.map((post) => post.id);
-
-    // Get comments with user information
-    const commentsResult = await db.query(
-      `
-      SELECT 
-        c.*,
-        u.username,
-        u.avatar_url,
-        u.nickname
-      FROM comments c
-      LEFT JOIN users u ON c.user_id = u.id
-      WHERE c.post_id = ANY($1::uuid[])
-      ORDER BY c.created_at ASC
-      `,
-      [postIds]
-    );
-
-    const comments = commentsResult.rows;
-
-    // Group comments by post
-    const commentsByPost = comments.reduce((acc, comment) => {
-      if (!acc[comment.post_id]) {
-        acc[comment.post_id] = [];
-      }
-      acc[comment.post_id].push({
-        ...comment,
-        username: comment.nickname || comment.username,
-        avatar_url: comment.avatar_url,
-      });
-      return acc;
-    }, {} as Record<string, any[]>);
-
-    // Add comments to each post
-    return posts.map((post) => ({
-      ...post,
-      username: post.nickname || post.username,
-      comments: commentsByPost[post.id] || [],
-    }));
+    const comments = await getPostComments(posts.map(post => post.id));
+    return processPostsWithComments(posts, comments);
   }
 
-  // If no posts, return empty array
-  return posts.map((post) => ({
-    ...post,
-    username: post.nickname || post.username,
-    comments: [],
-  }));
+  // If no posts, return posts without comments
+  return processPostsWithComments(posts, []);
+}
+
+export async function getUserPosts(username: string) {
+  const db = getDb();
+  if (!db) {
+    throw new Error("Database connection is undefined");
+  }
+
+  // Get user's posts with user information
+  const postsResult = await db.query(
+    `
+    SELECT 
+      p.*,
+      u.username,
+      u.avatar_url,
+      u.nickname
+    FROM posts p
+    LEFT JOIN users u ON p.user_id = u.id
+    WHERE u.username = $1
+    ORDER BY p.created_at DESC
+    `,
+    [username]
+  );
+
+  const posts = postsResult.rows;
+
+  // If we have posts, get their comments
+  if (posts.length > 0) {
+    const comments = await getPostComments(posts.map(post => post.id));
+    return processPostsWithComments(posts, comments);
+  }
+
+  // If no posts, return posts without comments
+  return processPostsWithComments(posts, []);
 }
