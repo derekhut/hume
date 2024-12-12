@@ -122,6 +122,9 @@ export default function Login() {
                 placeholder="请输入邀请码"
                 required
               />
+              <p className="mt-1 text-sm text-gray-400">
+                Invitation Code (MiraclePlus Only): miracleplus
+              </p>
             </div>
           ) : (
             <>
