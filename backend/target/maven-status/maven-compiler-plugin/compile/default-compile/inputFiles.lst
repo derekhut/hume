@@ -1,0 +1,10 @@
+/home/ubuntu/projects/smart-agriculture/backend/src/main/java/com/smartagri/model/Greenhouse.java
+/home/ubuntu/projects/smart-agriculture/backend/src/main/java/com/smartagri/service/FboxApiService.java
+/home/ubuntu/projects/smart-agriculture/backend/src/main/java/com/smartagri/model/SensorData.java
+/home/ubuntu/projects/smart-agriculture/backend/src/main/java/com/smartagri/repository/GreenhouseRepository.java
+/home/ubuntu/projects/smart-agriculture/backend/src/main/java/com/smartagri/service/YsApiService.java
+/home/ubuntu/projects/smart-agriculture/backend/src/main/java/com/smartagri/controller/MonitoringController.java
+/home/ubuntu/projects/smart-agriculture/backend/src/main/java/com/smartagri/config/SecurityConfig.java
+/home/ubuntu/projects/smart-agriculture/backend/src/main/java/com/smartagri/repository/SensorDataRepository.java
+/home/ubuntu/projects/smart-agriculture/backend/src/main/java/com/smartagri/SmartAgriApplication.java
+/home/ubuntu/projects/smart-agriculture/backend/src/main/java/com/smartagri/model/SensorType.java
