@@ -25,6 +25,7 @@ interface Post {
   likes_count: number;
   created_at: string;
   username: string;
+  nickname: string | null;
   avatar_url: string | null;
   comments: Comment[];
 }
@@ -77,7 +78,7 @@ const Post: FC<PostProps> = ({ post, onLike, onComment }) => {
         <div>
           <Link href={`/users/${encodeURIComponent(post.username)}`}>
             <h3 className="text-white font-medium hover:underline">
-              {post.username}
+              {post.nickname || post.username}
             </h3>
           </Link>
           <p className="text-gray-400 text-sm">{formattedDate}</p>

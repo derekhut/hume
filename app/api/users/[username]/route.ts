@@ -21,7 +21,7 @@ export async function GET(
     // First try to find existing user
     const currentUser = request.headers.get("x-user");
     const query = `
-      SELECT 
+      SELECT
         u.id,
         u.username,
         u.nickname,
@@ -35,7 +35,7 @@ export async function GET(
         (SELECT COUNT(*) FROM followers WHERE following_id = u.id) as followers_count,
         (SELECT COUNT(*) FROM followers WHERE follower_id = u.id) as following_count,
         EXISTS(
-          SELECT 1 FROM followers f3 
+          SELECT 1 FROM followers f3
           WHERE f3.follower_id = (
             SELECT id FROM users WHERE username = $2
           )
@@ -51,33 +51,12 @@ export async function GET(
       [username, currentUser || ""] // Pass current user for is_following check
     );
 
-    // If user doesn't exist, create a new one with default avatar
+    // If user doesn't exist, return 404 instead of creating a new user
     if (result.rowCount === 0) {
-      const defaultAvatar = `https://api.dicebear.com/7.x/thumbs/svg?seed=${username}`;
-      const insertResult = await db.query(
-        `
-        INSERT INTO users (username, avatar_url)
-        VALUES ($1, $2)
-        RETURNING *
-        `,
-        [username, defaultAvatar]
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
       );
-
-      result = {
-        rows: [
-          {
-            ...insertResult.rows[0],
-            school_name: null,
-            followers_count: 0,
-            following_count: 0,
-            is_following: false,
-          },
-        ],
-        command: 'SELECT',
-        rowCount: 1,
-        oid: 0,
-        fields: [],
-      };
     }
 
     // Convert count fields to numbers
