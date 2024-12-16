@@ -1,0 +1,22 @@
+spring:
+  profiles:
+    active: dev
+
+# External API Configuration
+fbox:
+  client-id: 68db2e8bda8d47b5b5db7eaf71c7dcdd
+  client-secret: 76dc724c95004acab25482d344dab407
+  base-url: https://fbox360.com
+
+ys:
+  account-id: 1ca7f0ab24ba41b291346347ec30140e
+  base-url: http://42.193.14.241:7000
+  camera-urls:
+    - id: AB9831171
+      url: ezopen://open.ys7.com/AB9831171/1.hd.live
+    - id: AC0174303
+      url: ezopen://open.ys7.com/AC0174303/1.hd.live
+    - id: AB9831218
+      url: ezopen://open.ys7.com/AB9831218/1.hd.live
+    - id: L29334649
+      url: ezopen://open.ys7.com/L29334649/1.hd.live
