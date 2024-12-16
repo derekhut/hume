@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -45,6 +45,28 @@ const Post: FC<PostProps> = ({ post, onLike, onComment, onDelete, currentUser })
   const [showComments, setShowComments] = useState(false);
   const [likeError, setLikeError] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Check if user has already liked the post
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      try {
+        const response = await fetch(`/api/posts/${post.id}/like/check`, {
+          headers: {
+            'x-user': currentUser || '',
+          },
+        });
+        if (response.ok) {
+          const { hasLiked } = await response.json();
+          setIsLiked(hasLiked);
+        }
+      } catch (error) {
+        console.error('Failed to check like status:', error);
+      }
+    };
+    if (currentUser) {
+      checkLikeStatus();
+    }
+  }, [post.id, currentUser]);
 
   const handleLike = async () => {
     try {
@@ -153,7 +175,7 @@ const Post: FC<PostProps> = ({ post, onLike, onComment, onDelete, currentUser })
           {likeError && (
             <p className="text-red-500 text-sm mt-1">{likeError}</p>
           )}
-          {currentUser === post.user_id && (
+          {currentUser && post.username === currentUser && (
             <button
               onClick={handleDelete}
               disabled={isDeleting}
