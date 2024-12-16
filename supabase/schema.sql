@@ -96,24 +96,26 @@ RETURNS BOOLEAN AS $$
 BEGIN
     RETURN (
         SELECT EXISTS (
-            SELECT 1 
-            FROM users 
-            WHERE id = auth.uid() 
+            SELECT 1
+            FROM users
+            WHERE id = auth.uid()
             AND username = 'Derek'
         )
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Modify existing policies to only allow Derek
+-- Modify existing policies to allow users to delete their own posts
 CREATE POLICY "Only Derek can insert posts" ON posts
     FOR INSERT WITH CHECK (is_derek());
 
 CREATE POLICY "Only Derek can update posts" ON posts
     FOR UPDATE USING (is_derek());
 
-CREATE POLICY "Only Derek can delete posts" ON posts
-    FOR DELETE USING (is_derek());
+CREATE POLICY "Users can delete their own posts" ON posts
+    FOR DELETE USING (
+      auth.uid()::text::uuid = user_id OR is_derek()
+    );
 
 CREATE POLICY "Only Derek can insert comments" ON comments
     FOR INSERT WITH CHECK (is_derek());
