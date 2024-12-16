@@ -24,7 +24,7 @@ interface UserProfile {
 export default function UserPage() {
   const params = useParams();
   const router = useRouter();
-  const username = params.username as string;
+  const username = params?.username as string | undefined;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +44,11 @@ export default function UserPage() {
 
   // Fetch user profile and posts
   useEffect(() => {
+    if (!username || !currentUser) {
+      setIsLoading(false);
+      return;
+    }
+
     const fetchUserData = async () => {
       try {
         // Fetch user profile
@@ -68,14 +73,11 @@ export default function UserPage() {
       }
     };
 
-    if (currentUser) {
-      // Only fetch data if user is authenticated
-      fetchUserData();
-    }
+    fetchUserData();
   }, [username, currentUser]);
 
   const handleFollow = async () => {
-    if (!profile || followLoading) return;
+    if (!profile || followLoading || !username) return;
 
     const currentUser = localStorage.getItem("user");
     if (!currentUser) {
@@ -117,6 +119,7 @@ export default function UserPage() {
   };
 
   const handleLike = async (postId: string) => {
+    if (!username) return;
     try {
       const response = await fetch(`/api/posts/${postId}/like`, {
         method: "POST",
@@ -136,6 +139,7 @@ export default function UserPage() {
   };
 
   const handleComment = async (postId: string, content: string) => {
+    if (!username) return;
     try {
       const response = await fetch(`/api/posts/${postId}/comments`, {
         method: "POST",
@@ -157,6 +161,17 @@ export default function UserPage() {
       console.error("Failed to add comment:", err);
     }
   };
+
+  if (!username) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] text-white">
+        <TopBanner onRefresh={() => {}} />
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <div className="text-center">Invalid username</div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
