@@ -14,11 +14,15 @@ export async function POST(
   }
 
   try {
-    // Get the post ID from params
+    // Get the post ID from params and user from headers
     const { id } = await params;
+    const currentUser = request.headers.get("x-user");
 
-    if (!id) {
-      return NextResponse.json({ error: "Invalid post ID" }, { status: 400 });
+    if (!id || !currentUser) {
+      return NextResponse.json(
+        { error: "Invalid post ID or user not authenticated" },
+        { status: 400 }
+      );
     }
 
     // Use a client from the pool
@@ -27,14 +31,32 @@ export async function POST(
     try {
       await client.query("BEGIN");
 
-      // Increment likes count
+      // Check if user already liked the post
+      const existingLike = await client.query(
+        `SELECT * FROM likes WHERE post_id = $1 AND user_id = (SELECT id FROM users WHERE username = $2)`,
+        [id, currentUser]
+      );
+
+      if (existingLike.rows.length > 0) {
+        await client.query("ROLLBACK");
+        return NextResponse.json(
+          { error: "Already liked this post" },
+          { status: 400 }
+        );
+      }
+
+      // Insert like record and increment likes count
+      await client.query(
+        `INSERT INTO likes (post_id, user_id)
+         SELECT $1, id FROM users WHERE username = $2`,
+        [id, currentUser]
+      );
+
       const result = await client.query(
-        `
-        UPDATE posts
-        SET likes_count = likes_count + 1
-        WHERE id = $1
-        RETURNING *
-        `,
+        `UPDATE posts
+         SET likes_count = likes_count + 1
+         WHERE id = $1
+         RETURNING *`,
         [id]
       );
 

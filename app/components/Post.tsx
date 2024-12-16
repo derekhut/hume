@@ -40,11 +40,15 @@ const Post: FC<PostProps> = ({ post, onLike, onComment }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [showComments, setShowComments] = useState(false);
+  const [likeError, setLikeError] = useState<string | null>(null);
 
-  const handleLike = () => {
-    if (!isLiked) {
-      onLike();
+  const handleLike = async () => {
+    try {
+      await onLike();
       setIsLiked(true);
+      setLikeError(null);
+    } catch (error) {
+      setLikeError("Already liked this post");
     }
   };
 
@@ -103,7 +107,8 @@ const Post: FC<PostProps> = ({ post, onLike, onComment }) => {
           className={`flex items-center space-x-1 ${
             isLiked ? "text-red-500" : "text-gray-400"
           } hover:text-red-500`}
-          onClick={handleLike}>
+          onClick={handleLike}
+          title={likeError || "Like this post"}>
           <svg
             className="w-5 h-5"
             fill={isLiked ? "currentColor" : "none"}
@@ -118,6 +123,9 @@ const Post: FC<PostProps> = ({ post, onLike, onComment }) => {
           </svg>
           <span>{post.likes_count}</span>
         </button>
+        {likeError && (
+          <p className="text-red-500 text-sm mt-1">{likeError}</p>
+        )}
         <button
           className="text-gray-400 hover:text-gray-300 flex items-center space-x-1"
           onClick={() => setShowComments(!showComments)}>
