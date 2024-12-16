@@ -38,31 +38,19 @@ export default function Home() {
 
   // Check authentication and fetch profile
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (!user) {
-      router.replace("/login");
-    } else {
+    const fetchProfile = async () => {
       try {
-        // Use the actual username from localStorage
-        fetch(`/api/users/${user}`)
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.success) {
-              setProfile(data.profile);
-            }
-          })
-          .catch((error) => {
-            console.error("Error fetching profile:", error);
-          })
-          .finally(() => {
-            setIsLoading(false);
-          });
-      } catch (error) {
-        console.error("Error fetching profile:", error);
+        const response = await fetch('/api/users/me');
+        if (response.ok) {
+          const data = await response.json();
+          setProfile(data);
+        }
+      } finally {
         setIsLoading(false);
       }
-    }
-  }, [router]);
+    };
+    fetchProfile();
+  }, []);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -178,8 +166,8 @@ export default function Home() {
     }
   };
 
-  if (isLoading) {
-    return null;
+  if (isLoading || !profile) {
+    return <div className="text-white p-4">Loading...</div>;
   }
 
   if (error) {
@@ -206,6 +194,8 @@ export default function Home() {
                   post={post}
                   onComment={(content) => handleCreateComment(post.id, content)}
                   onLike={() => handleLike(post.id)}
+                  currentUser={profile?.id}
+                  onDelete={() => fetchPosts()}
                 />
               ))}
             </div>

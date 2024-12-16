@@ -28,19 +28,23 @@ interface Post {
   nickname: string | null;
   avatar_url: string | null;
   comments: Comment[];
+  user_id: string;
 }
 
 interface PostProps {
   post: Post;
   onLike: () => void;
   onComment: (comment: string) => void;
+  onDelete?: () => void;
+  currentUser?: string;
 }
 
-const Post: FC<PostProps> = ({ post, onLike, onComment }) => {
+const Post: FC<PostProps> = ({ post, onLike, onComment, onDelete, currentUser }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [showComments, setShowComments] = useState(false);
   const [likeError, setLikeError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleLike = async () => {
     try {
@@ -59,11 +63,33 @@ const Post: FC<PostProps> = ({ post, onLike, onComment }) => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!onDelete || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await fetch(`/api/posts/${post.id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-user': currentUser || '',
+        },
+      });
+      onDelete();
+    } catch (error) {
+      console.error('Failed to delete post:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Format the date to a readable string
   const formattedDate = new Date(post.created_at).toLocaleString();
 
   return (
-    <div className="w-full max-w-2xl bg-gray-800 rounded-lg p-4">
+    <div
+      className="w-full max-w-2xl bg-gray-800 rounded-lg p-4"
+      data-post-id={post.id}
+      data-post-user-id={post.user_id}
+      data-current-user={currentUser}>
       <div className="flex items-center space-x-3">
         <Link href={`/users/${encodeURIComponent(post.username)}`}>
           <div className="w-10 h-10 rounded-full bg-gray-600 overflow-hidden relative cursor-pointer">
@@ -103,29 +129,52 @@ const Post: FC<PostProps> = ({ post, onLike, onComment }) => {
         </div>
       )}
       <div className="mt-4 flex space-x-4 items-center">
-        <button
-          className={`flex items-center space-x-1 ${
-            isLiked ? "text-red-500" : "text-gray-400"
-          } hover:text-red-500`}
-          onClick={handleLike}
-          title={likeError || "Like this post"}>
-          <svg
-            className="w-5 h-5"
-            fill={isLiked ? "currentColor" : "none"}
-            stroke="currentColor"
-            viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-            />
-          </svg>
-          <span>{post.likes_count}</span>
-        </button>
-        {likeError && (
-          <p className="text-red-500 text-sm mt-1">{likeError}</p>
-        )}
+        <div className="flex items-center space-x-4">
+          <button
+            className={`flex items-center space-x-1 ${
+              isLiked ? "text-red-500" : "text-gray-400"
+            } hover:text-red-500`}
+            onClick={handleLike}
+            title={likeError || "Like this post"}>
+            <svg
+              className="w-5 h-5"
+              fill={isLiked ? "currentColor" : "none"}
+              stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+              />
+            </svg>
+            <span>{post.likes_count}</span>
+          </button>
+          {likeError && (
+            <p className="text-red-500 text-sm mt-1">{likeError}</p>
+          )}
+          {currentUser === post.user_id && (
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className={`text-red-500 hover:text-red-400 ${isDeleting ? 'opacity-50' : ''}`}
+              title="Delete post">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
         <button
           className="text-gray-400 hover:text-gray-300 flex items-center space-x-1"
           onClick={() => setShowComments(!showComments)}>
