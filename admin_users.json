@@ -1,0 +1,1 @@
+{"users":[{"id":1,"email":"admin","isAdmin":true,"rateLimit":1000,"createdAt":"2024-12-18T03:33:56.989Z"},{"id":2,"email":"test@example.com","isAdmin":false,"rateLimit":60,"createdAt":"2024-12-18T03:33:57.074Z"}]}
