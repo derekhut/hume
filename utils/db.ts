@@ -1,40 +1,71 @@
+/**
+ * db.ts
+ * 数据库操作工具函数模块
+ * 提供数据库连接管理和各种数据操作的功能
+ */
+
 import { Pool } from "pg";
 import { generateAvatarUrl } from "./random";
 
+/**
+ * 帖子数据类型定义
+ * @description 定义了帖子的基本数据结构
+ */
 export type Post = {
-  id: string;
-  content: string;
-  user_id: string;
-  image_url?: string | null;
-  likes_count: number;
-  created_at: string;
+  id: string;           // 帖子唯一标识符
+  content: string;      // 帖子内容
+  user_id: string;      // 发帖用户ID
+  image_url?: string | null;  // 帖子图片URL（可选）
+  likes_count: number;  // 点赞数
+  created_at: string;   // 创建时间
 };
 
+/**
+ * 评论数据类型定义
+ * @description 定义了评论的基本数据结构
+ */
 export type Comment = {
-  id: string;
-  postId: string;
-  content: string;
-  username: string;
-  avatarUrl: string;
-  created_at: string;
+  id: string;          // 评论唯一标识符
+  postId: string;      // 关联的帖子ID
+  content: string;     // 评论内容
+  username: string;    // 评论用户名
+  avatarUrl: string;   // 评论用户头像
+  created_at: string;  // 创建时间
 };
 
+/**
+ * 图片数据类型定义
+ * @description 定义了图片资源的基本数据结构
+ */
 export type Image = {
-  id: string;
-  imageUrl: string;
-  llmName: string;
-  created_at: string;
+  id: string;          // 图片唯一标识符
+  imageUrl: string;    // 图片URL
+  llmName: string;     // AI模型名称
+  created_at: string;  // 创建时间
 };
 
+// 全局数据库连接池实例
 let globalPool: Pool | null;
 
+/**
+ * 获取数据库连接池实例
+ * @returns 返回PostgreSQL数据库连接池实例
+ * @throws 如果数据库连接URL未设置或连接失败则抛出错误
+ * @description
+ * - 使用单例模式管理数据库连接池
+ * - 自动处理SSL连接（生产环境）
+ * - 包含连接池配置：
+ *   - 最大连接数：10
+ *   - 空闲超时：30秒
+ *   - 连接超时：10秒
+ */
 export function getDb(): Pool {
   if (!globalPool) {
     const connectionString = process.env.POSTGRES_URL;
     if (!connectionString) {
-      throw new Error("POSTGRES_URL environment variable is not set");
+      throw new Error("POSTGRES_URL环境变量未设置");
     }
-    console.log("Initializing database connection pool...");
+    console.log("初始化数据库连接池...");
 
     globalPool = new Pool({
       connectionString,
@@ -50,31 +81,31 @@ export function getDb(): Pool {
     });
 
     globalPool.on("error", (err) => {
-      console.error("Unexpected error on idle client", err);
+      console.error("空闲客户端发生意外错误", err);
       globalPool = null;
     });
 
     globalPool.on("connect", (client) => {
       client.on("error", (err) => {
-        console.error("Database client error:", err);
+        console.error("数据库客户端错误:", err);
       });
     });
 
-    // Test the connection
+    // 测试数据库连接
     globalPool
       .connect()
       .then((client) => {
-        console.log("Successfully connected to database");
+        console.log("成功连接到数据库");
         client.release();
       })
       .catch((err) => {
-        console.error("Error testing database connection:", err);
+        console.error("测试数据库连接失败:", err);
         globalPool = null;
       });
   }
 
   if (!globalPool) {
-    throw new Error("Failed to initialize database connection");
+    throw new Error("数据库连接池初始化失败");
   }
 
   return globalPool;
@@ -94,7 +125,7 @@ export async function insertPost(post: {
 }) {
   const db = getDb();
   if (!db) {
-    throw new Error("Database connection is undefined");
+    throw new Error("数据库连接未定义");
   }
   const result = await db.query(
     `
@@ -116,7 +147,7 @@ export async function insertComment(comment: {
 }) {
   const db = getDb();
   if (!db) {
-    throw new Error("Database connection is undefined");
+    throw new Error("数据库连接未定义");
   }
   const result = await db.query(
     `
@@ -136,7 +167,7 @@ export async function insertImage(image: {
 }) {
   const db = getDb();
   if (!db) {
-    throw new Error("Database connection is undefined");
+    throw new Error("数据库连接未定义");
   }
   const result = await db.query(
     `
@@ -153,10 +184,10 @@ export async function insertImage(image: {
 export async function getPostWithComments(postId: string) {
   const db = getDb();
   if (!db) {
-    throw new Error("Database connection is undefined");
+    throw new Error("数据库连接未定义");
   }
 
-  // Get post
+  // 获取帖子数据
   const postResult = await db.query(`SELECT * FROM posts WHERE id = $1`, [
     postId,
   ]);
@@ -166,10 +197,10 @@ export async function getPostWithComments(postId: string) {
     return null;
   }
 
-  // Get comments for the post
+  // 获取帖子的评论列表
   const commentsResult = await db.query(
-    `SELECT * FROM comments 
-     WHERE "postId" = $1 
+    `SELECT * FROM comments
+     WHERE "postId" = $1
      ORDER BY created_at ASC`,
     [postId]
   );
@@ -184,12 +215,12 @@ export async function getPostWithComments(postId: string) {
 async function getPostComments(postIds: string[]) {
   const db = getDb();
   if (!db) {
-    throw new Error("Database connection is undefined");
+    throw new Error("数据库连接未定义");
   }
 
   const commentsResult = await db.query(
     `
-    SELECT 
+    SELECT
       c.*,
       u.username,
       u.avatar_url,
@@ -207,7 +238,7 @@ async function getPostComments(postIds: string[]) {
 
 // 处理帖子和评论数据
 function processPostsWithComments(posts: any[], comments: any[]) {
-  // Group comments by post
+  // 按帖子ID分组评论
   const commentsByPost = comments.reduce((acc, comment) => {
     if (!acc[comment.post_id]) {
       acc[comment.post_id] = [];
@@ -220,7 +251,7 @@ function processPostsWithComments(posts: any[], comments: any[]) {
     return acc;
   }, {} as Record<string, any[]>);
 
-  // Add comments to each post
+  // 将评论添加到对应的帖子中
   return posts.map((post) => ({
     ...post,
     username: post.nickname || post.username,
@@ -231,13 +262,13 @@ function processPostsWithComments(posts: any[], comments: any[]) {
 export async function getAllPosts() {
   const db = getDb();
   if (!db) {
-    throw new Error("Database connection is undefined");
+    throw new Error("数据库连接未定义");
   }
 
-  // Get all posts with user information
+  // 获取所有帖子及用户信息
   const postsResult = await db.query(
     `
-    SELECT 
+    SELECT
       p.*,
       u.username,
       u.avatar_url,
@@ -250,26 +281,26 @@ export async function getAllPosts() {
 
   const posts = postsResult.rows;
 
-  // If we have posts, get their comments
+  // 如果有帖子，获取其评论
   if (posts.length > 0) {
     const comments = await getPostComments(posts.map(post => post.id));
     return processPostsWithComments(posts, comments);
   }
 
-  // If no posts, return posts without comments
+  // 如果没有帖子，返回空数组
   return processPostsWithComments(posts, []);
 }
 
 export async function getUserPosts(username: string) {
   const db = getDb();
   if (!db) {
-    throw new Error("Database connection is undefined");
+    throw new Error("数据库连接未定义");
   }
 
-  // Get user's posts with user information
+  // 获取用户的帖子及用户信息
   const postsResult = await db.query(
     `
-    SELECT 
+    SELECT
       p.*,
       u.username,
       u.avatar_url,
@@ -284,12 +315,12 @@ export async function getUserPosts(username: string) {
 
   const posts = postsResult.rows;
 
-  // If we have posts, get their comments
+  // 如果有帖子，获取其评论
   if (posts.length > 0) {
     const comments = await getPostComments(posts.map(post => post.id));
     return processPostsWithComments(posts, comments);
   }
 
-  // If no posts, return posts without comments
+  // 如果没有帖子，返回空数组
   return processPostsWithComments(posts, []);
 }
