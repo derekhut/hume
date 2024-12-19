@@ -40,9 +40,9 @@ export default function Login() {
         body: JSON.stringify(
           isNewUser
             ? { invitationCode: invitationCode.trim().toUpperCase() }
-            : { 
+            : {
                 email: email.trim().toLowerCase(),
-                password: password
+                password: password,
               }
         ),
       });
@@ -55,7 +55,10 @@ export default function Login() {
 
       if (isNewUser) {
         // Store invitation code for welcome page
-        sessionStorage.setItem("invitationCode", invitationCode.trim().toUpperCase());
+        sessionStorage.setItem(
+          "invitationCode",
+          invitationCode.trim().toUpperCase()
+        );
         router.replace("/welcome");
       } else {
         // Store username and redirect to home
@@ -73,7 +76,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
       <div className="bg-gray-900 p-8 rounded-lg shadow-lg w-96">
         <h1 className="text-2xl text-white font-bold mb-6">Welcome to Woody</h1>
-        
+
         {/* Login Mode Tabs */}
         <div className="flex mb-6 bg-gray-800 rounded-lg p-1">
           <button
@@ -82,8 +85,7 @@ export default function Login() {
                 ? "bg-blue-600 text-white"
                 : "text-gray-400 hover:text-white"
             }`}
-            onClick={() => setIsNewUser(false)}
-          >
+            onClick={() => setIsNewUser(false)}>
             登录
           </button>
           <button
@@ -92,8 +94,7 @@ export default function Login() {
                 ? "bg-blue-600 text-white"
                 : "text-gray-400 hover:text-white"
             }`}
-            onClick={() => setIsNewUser(true)}
-          >
+            onClick={() => setIsNewUser(true)}>
             新用户
           </button>
         </div>
@@ -103,27 +104,28 @@ export default function Login() {
             {error}
           </div>
         )}
-        
+
         <form onSubmit={handleSubmit}>
           {isNewUser ? (
             <div className="mb-6">
               <label
                 htmlFor="invitationCode"
-                className="block text-gray-300 mb-2"
-              >
+                className="block text-gray-300 mb-2">
                 邀请码
               </label>
               <input
                 type="text"
                 id="invitationCode"
                 value={invitationCode}
-                onChange={(e) => setInvitationCode(e.target.value.toUpperCase())}
+                onChange={(e) =>
+                  setInvitationCode(e.target.value.toUpperCase())
+                }
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:border-blue-500"
                 placeholder="请输入邀请码"
                 required
               />
               <p className="mt-1 text-sm text-gray-400">
-                Invitation Code (MiraclePlus Only): miracleplus
+                Invitation Code (MiraclePlus Only): MIRACLEPLUS
               </p>
             </div>
           ) : (
@@ -159,8 +161,7 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                  >
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
                     {showPassword ? (
                       <EyeSlashIcon className="w-5 h-5" />
                     ) : (
@@ -176,14 +177,8 @@ export default function Login() {
             disabled={isLoading}
             className={`w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors ${
               isLoading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          >
-            {isLoading 
-              ? "请稍等..." 
-              : isNewUser 
-                ? "开始注册" 
-                : "登录"
-            }
+            }`}>
+            {isLoading ? "请稍等..." : isNewUser ? "开始注册" : "登录"}
           </button>
         </form>
       </div>
